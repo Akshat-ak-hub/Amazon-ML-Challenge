@@ -1,0 +1,49 @@
+
+======== student_resource/dataset/train/train_source1.tsv ========
+'entity_id\tbusiness_name\tbusiness_address\tcountry\n'
+"S1-925783039\tOrelee's Barbershop\t1795 Westchester Drive, High Point, NC\tUS\n"
+'S1-773889195\tPrime Money\t17560 Ellis Road, Tahlequah, OK\tUS\n'
+'S1-377745466\tB+ Retail Inc\t1712 Montebello Avenue, Phoenix, AZ\tUS\n'
+ROW COUNT (incl header): 2206822
+
+======== student_resource/dataset/train/train_source2.tsv ========
+'entity_id\tbusiness_name\tbusiness_address\tcountry\n'
+'S2-166376419\tराम मार्केटिंग प्राइवेट लिमिटेड\tKH NO. -570/13, NEW DELHI, WEST DELHI, Delhi\tIndia\n'
+'S2-764573417\t-- Holloway Peak Inc Seafood\t105 ELM ST, MORGANTON, NC\tUS\n'
+'S2-639257739\tआदित्य प्रॉपर्टीज एलएलपी\tG-3/571, GULMOHAR COLONY, BHOPAL, Madhya Pradesh\tIndia\n'
+ROW COUNT (incl header): 5034617
+
+======== student_resource/dataset/train/train_source3.tsv ========
+'entity_id\tbusiness_name\tbusiness_address\tcountry\n'
+'S3-202863386\twilfordhancock.com\tMack Rd, Haltom City, Texas\tUS\n'
+'S3-859268022\tInternational South Consultants Private Ltd\t\tIndia\n'
+'S3-22467283\tLLC Moncada Léarning Center\t5780 Fawn Ct, Fort Worth, Texas\tUS\n'
+ROW COUNT (incl header): 5285604
+
+======== student_resource/dataset/train/train_ground_truth.tsv ========
+'source1_entity_id\tmatched_entity_ids\n'
+'S1-965667\tS2-681193310,S2-743505751,S3-775321672,S3-11291185,S3-860443364\n'
+'S1-55344266\tS2-249013014,S2-197070651,S3-478195123,S3-384364074\n'
+'S1-343815751\tS2-790675320,S2-479876582,S3-878454467\n'
+ROW COUNT (incl header): 2206822
+
+======== student_resource/dataset/test/test_source1.tsv ========
+'entity_id\tbusiness_name\tbusiness_address\tcountry\n'
+'S1-714132312\tZephay Labs Inc\t2621 Cotten Road, Tyler, TX\tUS\n'
+'S1-106407869\tVision Partners Corp\tIA, Iowa City, 1064 Newton Rd, Unit 11\tUS\n'
+'S1-156285671\t<< Team Ecole\t175 Boulevard du Président Franklin Roosevelt, Bordeaux, Nouvelle-Aquitaine\tFrance\n'
+ROW COUNT (incl header): 1732545
+
+======== student_resource/dataset/test/test_source2.tsv ========
+'entity_id\tbusiness_name\tbusiness_address\tcountry\n'
+'S2-192345572\tBrahma Infosoft\tCOIMATORE COLONY, HUNSUR TQMYSORE DIST., Karnataka\tIndia\n'
+'S2-566025912\tMarina Ecole France Sarl\t63 R. DE DIEPPE, LILLE, Hauts-de-France\tFrance\n'
+'S2-158121477\tSCI Ptit Àmicale\t18 RUE JEN ZAY, Dunkerque, Nord\tFrance\n'
+ROW COUNT (incl header): 4887274
+
+======== student_resource/dataset/test/test_source3.tsv ========
+'entity_id\tbusiness_name\tbusiness_address\tcountry\n'
+'S3-462677478\tमॉडर्न फाइनेंस\tNo 10 Enkay Square, 448A, Udyog Vihar Phase V, Gurugram, Gurgaon, HR\tIndia\n'
+'S3-374810425\tShri Sai Infratech Co\t3/115, East Delhi, DL\tIndia\n'
+'S3-198586129\tFractales Amis Groupe S.A.S\t23 Rue Icmre, La Teste-de-buch, Gironde\tFrance\n'
+ROW COUNT (incl header): 5082317
