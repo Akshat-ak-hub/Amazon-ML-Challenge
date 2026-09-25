@@ -3,6 +3,10 @@ dataset/
 output/
 _pdf_extract.txt
 
+# --- Scratch / temp files (leading underscore convention) ---
+_*.py
+_*.txt
+
 # --- Python ---
 __pycache__/
 *.py[cod]
