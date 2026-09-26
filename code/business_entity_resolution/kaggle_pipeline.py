@@ -37,7 +37,7 @@ from collections import Counter, defaultdict
 import numpy as np
 
 # ---- config (EDIT DATA_DIR for your Kaggle dataset path) --------------------
-DATA_DIR = "/kaggle/input/amazon-ml-be"      # <-- change to your dataset folder
+DATA_DIR = "/kaggle/input/datasetforamazon/student_resource/dataset"  # <-- your Kaggle dataset
 OUT_DIR = "/kaggle/working"
 DELIM = "\t"
 NGRAM_NAME = 3
@@ -56,10 +56,11 @@ import lightgbm as lgb                   # noqa: E402
 
 
 def path(split, src):
-    return f"{DATA_DIR}/{split}_source{src}.tsv"
+    # Files live under train/ and test/ subfolders (Kaggle student_resource layout).
+    return f"{DATA_DIR}/{split}/{split}_source{src}.tsv"
 
 
-GT_PATH = f"{DATA_DIR}/train_ground_truth.tsv"
+GT_PATH = f"{DATA_DIR}/train/train_ground_truth.tsv"
 
 # =============================================================================
 # 1. NORMALIZATION  (mirrors src/normalize.py)
@@ -432,10 +433,7 @@ def run(split_for_output="test"):
 
 
 if __name__ == "__main__":
-    # Notebook-safe: in Jupyter/Colab/Kaggle, the kernel injects args like
-    # "-f .../kernel.json" that argparse would reject. parse_known_args ignores
-    # unknown args so the script runs both as a CLI and pasted into a cell.
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", default="test", choices=["test", "train"])
-    args, _unknown = ap.parse_known_args()
+    args = ap.parse_args()
     run(args.split)
