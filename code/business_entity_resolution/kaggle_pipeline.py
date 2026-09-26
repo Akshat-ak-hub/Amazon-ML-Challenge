@@ -432,7 +432,10 @@ def run(split_for_output="test"):
 
 
 if __name__ == "__main__":
+    # Notebook-safe: in Jupyter/Colab/Kaggle, the kernel injects args like
+    # "-f .../kernel.json" that argparse would reject. parse_known_args ignores
+    # unknown args so the script runs both as a CLI and pasted into a cell.
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", default="test", choices=["test", "train"])
-    args = ap.parse_args()
+    args, _unknown = ap.parse_known_args()
     run(args.split)
