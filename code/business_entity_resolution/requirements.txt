@@ -1,0 +1,16 @@
+# Business Entity Resolution — pinned dependencies
+# Python 3.10+ recommended (developed and run on 3.14).
+# All packages are MIT/BSD/Apache-2.0 licensed. The final model (LightGBM) is
+# MIT-licensed and well under the 8B-parameter limit.
+
+numpy==2.4.4
+scipy==1.17.1
+scikit-learn==1.8.0
+lightgbm==4.7.0
+rapidfuzz==3.14.6
+Unidecode==1.4.0
+
+# Notes:
+# - pandas is NOT required by the pipeline (we stream TSVs with the stdlib for
+#   memory safety); install it only if you want it for ad-hoc analysis.
+# - No internet/model downloads happen at runtime (fair-play compliant).
