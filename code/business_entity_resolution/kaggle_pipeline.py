@@ -433,7 +433,8 @@ def run(split_for_output="test"):
 
 
 if __name__ == "__main__":
+    # Notebook-safe: parse_known_args ignores the kernel's injected "-f ...json" arg.
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", default="test", choices=["test", "train"])
-    args = ap.parse_args()
+    args, _unknown = ap.parse_known_args()
     run(args.split)
