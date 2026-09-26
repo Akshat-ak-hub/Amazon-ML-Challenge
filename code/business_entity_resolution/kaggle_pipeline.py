@@ -378,6 +378,15 @@ def run(split_for_output="test"):
             best_f, best_t = f, float(t)
     print(f"  BEST threshold={best_t:.2f}  valid macro-F0.5={best_f:.4f}", flush=True)
 
+    # --- FREE TRAINING MEMORY before loading TEST (prevents OOM) ---
+    # Explicit `del` genuinely releases these; keep only `model` and `best_t`.
+    print("Freeing training memory ...", flush=True)
+    import gc
+    del s1, s2, s3, s23, eids23, index, rec23
+    del X, y, s1ids, Xtr, ytr, Xva, yva, s1va, vmask, dtr, dva, sc
+    gc.collect()
+    # ---------------------------------------------------------------
+
     # ------ TEST inference ------
     print("Loading TEST sources ...", flush=True)
     ts1 = load_source(path(split_for_output, 1))
