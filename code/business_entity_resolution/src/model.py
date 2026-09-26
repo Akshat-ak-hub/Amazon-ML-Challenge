@@ -39,7 +39,7 @@ def load_pair_s1(split):
 
 
 def fbeta_macro(s1_ids, y_true, y_pred, beta=BETA):
-    """Macro-average F_beta per S1 entity (singletons scored: empty-correct=1)."""
+    """Macro-average F_beta per S1 entity (kept for reference / tests)."""
     from collections import defaultdict
     tp = defaultdict(int); fp = defaultdict(int); fn = defaultdict(int)
     ent = set()
@@ -56,7 +56,7 @@ def fbeta_macro(s1_ids, y_true, y_pred, beta=BETA):
     for s1 in ent:
         t, f_, n_ = tp[s1], fp[s1], fn[s1]
         if t == 0 and f_ == 0 and n_ == 0:
-            total += 1.0            # true singleton, predicted empty -> perfect
+            total += 1.0
             continue
         if t == 0:
             total += 0.0
@@ -68,14 +68,46 @@ def fbeta_macro(s1_ids, y_true, y_pred, beta=BETA):
     return total / len(ent) if ent else 0.0
 
 
-def tune_threshold(s1_ids, y_true, scores):
+def tune_threshold(s1_ids, y_true, scores, beta=BETA):
+    """Vectorized F_beta threshold search.
+
+    Groups rows by S1 entity once (integer codes), then for each candidate
+    threshold computes per-entity TP/FP/FN with numpy bincount — no Python loops
+    over millions of rows. Handles singletons (entities with no true positive and
+    no prediction score above threshold -> perfect 1.0).
+    """
+    codes, _ = _factorize(s1_ids)
+    n_ent = codes.max() + 1 if len(codes) else 0
+    y_true = y_true.astype(np.int64)
+    # per-entity count of true matches (fixed across thresholds)
+    true_per_ent = np.bincount(codes, weights=y_true, minlength=n_ent)
+    b2 = beta * beta
     best_t, best_f = 0.5, -1.0
     for t in np.arange(0.10, 0.95, 0.01):
-        pred = (scores >= t).astype(np.int8)
-        f = fbeta_macro(s1_ids, y_true, pred)
-        if f > best_f:
-            best_f, best_t = f, float(t)
+        pred = (scores >= t).astype(np.int64)
+        tp = np.bincount(codes, weights=(pred & y_true), minlength=n_ent)
+        pp = np.bincount(codes, weights=pred, minlength=n_ent)   # predicted positives
+        fp = pp - tp
+        fn = true_per_ent - tp
+        # per-entity F_beta
+        with np.errstate(divide="ignore", invalid="ignore"):
+            prec = np.where((tp + fp) > 0, tp / (tp + fp), 0.0)
+            rec = np.where((tp + fn) > 0, tp / (tp + fn), 0.0)
+            denom = b2 * prec + rec
+            fbeta = np.where(denom > 0, (1 + b2) * prec * rec / denom, 0.0)
+        # singletons: no true match AND no predicted -> perfect 1.0
+        singleton_perfect = (true_per_ent == 0) & (pp == 0)
+        fbeta = np.where(singleton_perfect, 1.0, fbeta)
+        score = fbeta.mean() if n_ent else 0.0
+        if score > best_f:
+            best_f, best_t = score, float(t)
     return best_t, best_f
+
+
+def _factorize(arr):
+    """Map arbitrary ids to 0..k-1 integer codes (like pandas.factorize)."""
+    uniq, codes = np.unique(arr, return_inverse=True)
+    return codes.astype(np.int64), uniq
 
 
 def main():
