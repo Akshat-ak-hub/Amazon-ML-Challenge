@@ -27,3 +27,6 @@ env/
 Thumbs.db
 .vscode/
 .idea/
+
+# Submission archives (large; rebuild with package_submission.py)
+*.zip
