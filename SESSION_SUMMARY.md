@@ -60,20 +60,64 @@ normalization + domain normalization**, not a fancier model.
 ceiling needed). v3 (address-number + domain keys) is the promising next step but
 DID NOT COMPLETE — see blocker below.
 
-## 5. THE BLOCKER: MEMORY (why we're shifting machines)
+## 5. THE BLOCKER: MEMORY (definitive finding after a full day)
 
-Current machine has **11.8 GB RAM**. Building a rich in-RAM inverted index over the
-10.3M S2/S3 records repeatedly hit the memory wall and swapped to disk (thrashing),
-stalling near 8M records. Happened 3x today (v1, v3a) + in the prior session.
+Current machine has **11.8 GB RAM**. EVERY recall-improving approach hit a wall:
 
-Mitigations already applied:
-- strong-keys-only index (dropped weak keys) — v2 fit and completed.
-- hashed int64 keys (8 bytes) instead of strings — big saver.
-- BUT address-number keys caused a combinatorial explosion (33M keys) → swap.
-- Lean v3 (≤2 addr keys/record) was relaunched but machine is being changed.
+- **In-RAM inverted index** (original blocking.py, and the enriched version with
+  strong keys): index grows to 30M+ keys over 10.3M records -> ~6 GB+ and SWAPS
+  (thrashes) around 7-8M records with <1 GB free. Stalls.
+- **Disk-based SQLite index** (blocking_v5.py): RAM stays flat (~2.5 GB, no wall!)
+  BUT per-entity scoring against the 60M-row disk table is SLOW: ~35-60 entities/sec
+  at full scale -> ~10 HOURS for train blocking alone. Not viable in the time left.
 
-**On the NEW machine (ideally 16 GB+ RAM):** the full rich index (weak + strong +
-address + domain keys) should fit, and we can measure the true achievable ceiling.
+Conclusion: the recall gain toward 0.984 fundamentally needs either MORE RAM (fast
+in-RAM path) or a vectorized/SQL-JOIN blocking rewrite (disk path). Neither fit the
+11.8 GB machine within the remaining time.
+
+### Experiments run (recall ceiling, 20k valid sample)
+| Approach | MACRO recall | cand/ent | speed at full scale |
+|---|---|---|---|
+| baseline (existing weak keys) | 87.9% | 18.4 | fast (already done) |
+| + strong keys only (v2) | 91.47% | 44.2 | in-RAM: OOM on this machine |
+| + address/domain keys union (v4) | 93.99% | 197.6 | disk: fits RAM, candidate flood |
+| + scored ranker K=50 (v5) | 91.90% | 43.0 | disk: fits RAM, ~10hr (too slow) |
+
+## 5b. WHAT IS READY TO RUN ON THE 16 GB MACHINE
+
+`src/blocking.py` has ALREADY been enriched (committed) with the strong keys:
+  - NC: exact core name, NS: sorted-token signature (word-order),
+    DC: domain-concat (moorebitwise.com<->Moore Bitwise), NP: full phonetic,
+    AC: near-exact address signature (same-address/garbled-name),
+    z: exact PIN (existing). Strong keys weighted 3x in candidates_for(), qualify
+    a candidate alone. TOP_K raised 20 -> 40.
+On 16 GB the in-RAM index should FIT (it needs ~7-9 GB) and run fast.
+
+### Exact commands on the 16 GB machine (after clone + data + config.py DATA_ROOT):
+```
+cd code/business_entity_resolution
+# 1. verify recall on a fast sample first:
+python src/blocking.py --split train --sample 30000     # want MACRO recall > 90%
+# 2. if good, run the full fast cycle (in-RAM blocking, not the disk v5):
+#    NOTE: run_full_cycle.py currently calls the SLOW blocking_v5. On 16GB, instead
+#    edit it to call the enriched src/blocking.py (build_blocking) for train+test,
+#    OR run stages manually:
+python src/blocking.py --split train        # full train candidates + recall ceiling
+#   then swap work/candidates_train.tsv is already the output path used by build_training
+python src/build_training.py                # rebuild training matrix
+python src/model.py                         # retrain + tune threshold
+python realistic_scorer.py                  # HONEST F0.5 gate (must beat 0.857)
+python src/predict_test.py                  # test blocking + predict -> output/*.tsv
+python ../../utils/validate_submission.py -m ../../output/matching_results.tsv \
+    -c ../../output/candidate_pairs.tsv -t <test_dir>
+```
+GATE RULE: only upload output/matching_results.tsv if realistic_scorer F0.5 > 0.857.
+
+## 5c. IF STAYING ON 11.8 GB: options
+- Keep the 0.857 submission (validated, safe, already on leaderboard).
+- OR vectorized blocking rewrite (SQL JOIN of S1-keys table x posting table) —
+  real dev work, ~1-2 hrs, untested.
+
 
 ## 6. NEXT STEPS (in order) ON THE NEW MACHINE
 

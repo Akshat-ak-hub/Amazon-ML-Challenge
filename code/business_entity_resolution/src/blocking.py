@@ -37,10 +37,10 @@ import config as C  # noqa: E402
 import normalize as N  # noqa: E402
 
 DELIM = "\t"
-TOP_K = C.BLOCK_K
+TOP_K = 40                 # raised from BLOCK_K=20: don't truncate entities with many true matches
 NGRAM_N = 3
 MAX_FANOUT = 2000          # drop keys with more postings than this
-MIN_SHARED = 2             # a candidate must share >= this many keys to qualify
+MIN_SHARED = 2             # a candidate must share >= this many WEAK keys (strong keys qualify alone)
 
 
 def _log(logf, msg):
@@ -79,6 +79,19 @@ def record_keys(name_raw: str, addr_raw: str):
     if toks:
         keys.add("f:" + toks[0])
 
+    # ---- STRONG name keys (high-precision; added to lift recall on the misses
+    # we diagnosed: garbled names, domain variants, word-order). These are FEW
+    # per record (cheap) but very distinctive. ----
+    if core:
+        keys.add("NC:" + core)                          # exact core name
+    if toks:
+        keys.add("NS:" + "_".join(sorted(toks)))        # sorted-token signature (word-order)
+    concat = "".join(toks)
+    if len(concat) >= 6:
+        keys.add("DC:" + concat)                        # domain-style: 'moorebitwise.com' <-> 'Moore Bitwise'
+    if nm.phonetic:
+        keys.add("NP:" + "".join(nm.phonetic.split()))  # full phonetic signature
+
     # ---- ADDRESS keys (crucial: catches name-garbled / same-address matches) ----
     if ad.present:
         if ad.pin:
@@ -99,6 +112,12 @@ def record_keys(name_raw: str, addr_raw: str):
         for t in alphas:
             if len(t) >= 5:
                 keys.add("at:" + t)
+        # STRONG: near-exact address signature (concat alpha + first number).
+        # Only near-identical addresses collide -> high precision, catches the
+        # big 'same address, garbled name' miss category.
+        if len(addr_core) >= 10:
+            first_num = nums[0].lstrip("0") if nums else ""
+            keys.add("AC:" + addr_core[:28] + "|" + first_num)
     return keys
 
 
@@ -147,18 +166,32 @@ def build_index(paths, logf, log_every=1_000_000):
 
 
 def candidates_for(keys, index, ids):
-    """Score candidates by shared-key count; return list of (eid, score) top-K."""
-    counter = Counter()
+    """Score candidates by shared-key count; return list of (eid, score) top-K.
+
+    Strong keys (exact name/sorted-name/domain/phonetic/exact-address/PIN) are
+    weighted heavily so a single strong match qualifies a candidate and ranks it
+    high — this recovers the garbled-name / same-address / word-order misses.
+    """
+    STRONG_PREFIXES = ("NC:", "NS:", "DC:", "NP:", "AC:", "z:")
+    counter = Counter()          # weak shared-key count
+    strong = Counter()           # strong shared-key weighted score
     for k in keys:
         postings = index.get(k)
-        if postings:
+        if not postings:
+            continue
+        if k[:3] in STRONG_PREFIXES or k[:2] == "z:":
+            for i in postings:
+                strong[i] += 3          # a strong key is worth 3 weak keys
+        else:
             counter.update(postings)
-    if not counter:
+    if not counter and not strong:
         return []
-    # keep those with >= MIN_SHARED shared keys; fall back to best if none reach it
-    items = [(i, c) for i, c in counter.items() if c >= MIN_SHARED]
+    # combined score; qualify if weak>=MIN_SHARED OR any strong key matched
+    allids = set(counter) | set(strong)
+    scored = [(i, counter.get(i, 0) + strong.get(i, 0)) for i in allids]
+    items = [(i, c) for i, c in scored if (counter.get(i, 0) >= MIN_SHARED or i in strong)]
     if not items:
-        items = counter.most_common(TOP_K)
+        items = sorted(scored, key=lambda kv: -kv[1])[:TOP_K]
     items.sort(key=lambda kv: (-kv[1], ids[kv[0]]))
     return [(ids[i], c) for i, c in items[:TOP_K]]
 
